@@ -15,7 +15,7 @@
 // under the License.
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { combineReducers, configureStore } from "@reduxjs/toolkit";
-import { persistReducer, persistStore } from "redux-persist";
+import { createTransform, persistReducer, persistStore } from "redux-persist";
 import appReducer from "./slices/appSlice";
 import appConfigReducer from "./slices/appConfigSlice";
 import authReducer from "./slices/authSlice";
@@ -23,6 +23,19 @@ import deviceReducer from "./slices/deviceSlice";
 import userConfigReducer from "./slices/userConfigSlice";
 import userInfoReducer from "./slices/userInfoSlice";
 import versionReducer from "./slices/versionSlice";
+
+// Strip exchangedToken from the apps array BEFORE persisting
+const stripExchangedTokens = createTransform(
+  (inbound: any) => {
+    if (!inbound?.apps) return inbound;
+    return {
+      ...inbound,
+      apps: inbound.apps.map((a: any) => ({ ...a, exchangedToken: "" })),
+    };
+  },
+  (outbound: any) => outbound,
+  { whitelist: ["apps"] }
+);
 
 const authPersistConfig = {
   key: "auth",
@@ -34,6 +47,7 @@ const appsPersistConfig = {
   key: "apps",
   storage: AsyncStorage,
   whitelist: ["apps"],
+  transforms: [stripExchangedTokens],
 };
 
 const userConfigPersistConfig = {

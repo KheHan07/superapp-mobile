@@ -20,7 +20,7 @@ import { restoreAuth } from "@/context/slices/authSlice";
 import { getUserConfigurations } from "@/context/slices/userConfigSlice";
 import { setUserInfo } from "@/context/slices/userInfoSlice";
 import { getVersions } from "@/context/slices/versionSlice";
-import { AppDispatch, persistor, store } from "@/context/store";
+import { RootState, AppDispatch, persistor, store } from "@/context/store";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { usePushNotificationHandler } from "@/hooks/usePushNotificationHandler";
 import { scheduleSessionNotifications } from "@/services/scheduledNotifications";
@@ -43,6 +43,7 @@ import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState } from "react";
 import { Provider, useDispatch } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
+import { restoreExchangedTokens } from "@/utils/exTokenRehydrator";
 
 // Component to handle app initialization
 function AppInitializer({ onReady }: { onReady: () => void }) {
@@ -64,7 +65,12 @@ function AppInitializer({ onReady }: { onReady: () => void }) {
           AsyncStorage.getItem(USER_INFO),
         ]);
 
-        if (savedApps) dispatch(setApps(JSON.parse(savedApps)));
+        if (savedApps) {
+          const parsed = JSON.parse(savedApps);
+          dispatch(setApps(parsed));
+          restoreExchangedTokens(parsed, dispatch);
+        }
+
         if (savedUserInfo) dispatch(setUserInfo(JSON.parse(savedUserInfo)));
 
         // Initialize notifications

@@ -14,9 +14,9 @@
 // specific language governing permissions and limitations
 // under the License.
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { APPS, DEFAULT_VIEWING_MODE } from "@/constants/Constants";
 import { DisplayMode } from "@/types/navigation";
+import { saveExchangedToken, deleteExchangedToken, persistAppsWithoutTokens } from "@/utils/exchangedTokenStore";
 
 export type Version = {
   version: string;
@@ -101,25 +101,33 @@ const appsSlice = createSlice({
         app.status = status;
         app.webViewUri = webViewUri;
         app.clientId = clientId;
-        app.displayMode = displayMode || DEFAULT_VIEWING_MODE;
+        app.displayMode = displayMode ?? app.displayMode;
+      if (exchangedToken !== undefined) {
+        app.exchangedToken = exchangedToken;
         if (exchangedToken) {
-          app.exchangedToken = exchangedToken;
-        } else app.exchangedToken = "";
-      }
+          // save to secure
+          void saveExchangedToken(appId, exchangedToken);
+        } else {
+          // clear from secure
+          void deleteExchangedToken(appId);
+        }
+    }
+  }
+  // persist without tokens
+  void persistAppsWithoutTokens(state.apps);
+},
 
-      // Ensure state is saved in AsyncStorage immediately
-      AsyncStorage.setItem(APPS, JSON.stringify(state.apps));
-    },
     updateExchangedToken: (
       state,
       action: PayloadAction<{ appId: string; exchangedToken: string }>
     ) => {
       const { appId, exchangedToken } = action.payload;
       const app = state.apps.find((app) => app.appId === appId);
-      if (app) app.exchangedToken = exchangedToken;
-
-      // Ensure state is saved in AsyncStorage immediately
-      AsyncStorage.setItem(APPS, JSON.stringify(state.apps));
+      if (app) {
+        app.exchangedToken = exchangedToken;    
+        void saveExchangedToken(appId, exchangedToken); // secure store
+      }
+      void persistAppsWithoutTokens(state.apps); // strip tokens when saving
     },
   },
 });

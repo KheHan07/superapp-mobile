@@ -45,7 +45,8 @@ import {
   DEFAULT_VIEWING_MODE,
 } from "@/constants/Constants";
 import { UpdateUserConfiguration } from "./userConfigService";
-
+import { persistAppsWithoutTokens } from "@/utils/exchangedTokenStore";
+import { restoreExchangedTokens } from "@/utils/exTokenRehydrator";
 // File handle services
 export const downloadMicroApp = async (
   dispatch: AppDispatch,
@@ -356,7 +357,8 @@ export const loadMicroAppDetails = async (
 
       // Update Redux and AsyncStorage
       dispatch(setApps(apps));
-      await AsyncStorage.setItem(APPS, JSON.stringify(apps));
+      await persistAppsWithoutTokens(apps);
+      await restoreExchangedTokens(apps, dispatch);
     }
   } catch (error) {
     console.error("Error loading micro apps:", error);

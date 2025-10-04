@@ -34,6 +34,7 @@ import dayjs from "dayjs";
 import { jwtDecode } from "jwt-decode";
 import { Alert } from "react-native";
 import { logout as appLogout, AuthorizeResult } from "react-native-app-auth";
+import { clearAllExchangedTokens } from "@/utils/exchangedTokenStore";
 
 const GRANT_TYPE_AUTHORIZATION_CODE = "authorization_code";
 const GRANT_TYPE_REFRESH_TOKEN = "refresh_token";
@@ -212,6 +213,8 @@ export const logout = async () => {
       return;
     }
     const { idToken } = JSON.parse(storedData) as { idToken?: string };
+    const appsJson = await AsyncStorage.getItem(APPS); // capture appIds BEFORE clearing APPS
+    const appIds = appsJson ? (JSON.parse(appsJson) as { appId: string }[]).map(a => a.appId) : [];
 
     if (!LOGOUT_URL) {
       throw new Error(
@@ -222,6 +225,7 @@ export const logout = async () => {
     // If idToken is missing, proceed with local logout
     if (!idToken) {
       console.warn("No idToken found. Performing local logout only.");
+      await clearAllExchangedTokens(appIds);
       await AsyncStorage.removeItem(AUTH_DATA);
       await AsyncStorage.removeItem(APPS);
       await AsyncStorage.removeItem(USER_INFO);
@@ -233,7 +237,7 @@ export const logout = async () => {
       idToken: idToken,
       postLogoutRedirectUrl: REDIRECT_URI,
     });
-
+    await clearAllExchangedTokens(appIds);
     await AsyncStorage.removeItem(AUTH_DATA);
     await AsyncStorage.removeItem(APPS);
     await AsyncStorage.removeItem(USER_INFO);
